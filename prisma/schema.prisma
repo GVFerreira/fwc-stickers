@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Sticker {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  code      String   @unique
+  title     String
+  section   String
+  type      String
+  collected Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

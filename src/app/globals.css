@@ -1,0 +1,129 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@source "../../**/*.{ts,tsx}";
+
+/* shadcn/tailwind.css inlined */
+@theme inline {
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto)); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto)); }
+    to { height: 0; }
+  }
+}
+@custom-variant data-open {
+  &:where([data-state="open"]), &:where([data-open]:not([data-open="false"])) { @slot; }
+}
+@custom-variant data-closed {
+  &:where([data-state="closed"]), &:where([data-closed]:not([data-closed="false"])) { @slot; }
+}
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── Shadcn dark theme (força dark como padrão) ── */
+:root {
+  --background:          #080d1a;
+  --foreground:          #e8eaf0;
+  --card:                #0f1726;
+  --card-foreground:     #e8eaf0;
+  --popover:             #0f1726;
+  --popover-foreground:  #e8eaf0;
+  --primary:             #f5c842;
+  --primary-foreground:  #080d1a;
+  --secondary:           #162035;
+  --secondary-foreground:#e8eaf0;
+  --muted:               #162035;
+  --muted-foreground:    #6a7a9a;
+  --accent:              rgba(245,200,66,0.1);
+  --accent-foreground:   #f5c842;
+  --destructive:         #e03030;
+  --destructive-foreground: #fff;
+  --border:              #1c2b44;
+  --input:               #1c2b44;
+  --ring:                #f5c842;
+  --radius:              0.625rem;
+
+  /* App tokens */
+  --gold:      #f5c842;
+  --gold-dim:  #c9a320;
+  --green:     #22c55e;
+  --green-dim: #166534;
+  --red:       #e03030;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* ── Sticker button (estado complexo não cobre com Tailwind puro) ── */
+.sticker-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s;
+  min-height: 54px;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+.sticker-btn:hover {
+  border-color: var(--gold);
+  background: rgba(245,200,66,0.05);
+}
+.sticker-btn.collected {
+  background: rgba(34,197,94,0.08);
+  border-color: var(--green-dim);
+}
+.sticker-btn.collected:hover {
+  background: rgba(224,48,48,0.08);
+  border-color: var(--red);
+}
+
+.sticker-code {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 0.3px;
+  line-height: 1;
+}
+.sticker-btn.collected .sticker-code { color: var(--green); }
+.sticker-btn.collected:hover .sticker-code { color: var(--red); }
+
+.sticker-title {
+  font-size: 0.6rem;
+  color: var(--muted-foreground);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+.sticker-btn.collected .sticker-title { color: rgba(34,197,94,0.7); }
+.sticker-btn.collected:hover .sticker-title { color: rgba(224,48,48,0.7); }
+
+/* ── Toast animation ── */
+@keyframes slideIn {
+  from { transform: translateX(60px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.toast-slide { animation: slideIn 0.2s ease; }
