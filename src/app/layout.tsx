@@ -6,13 +6,13 @@ import { cn } from "@/lib/utils";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "FIFA WC 2026 — Álbum de Figurinhas",
-  description: "Controle suas figurinhas do álbum da Copa do Mundo 2026",
+  title: "FIFA World Cup 2026 — Sticker Album Tracker",
+  description: "Track your FIFA World Cup 2026 Panini sticker collection.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={cn("font-sans", geist.variable)}>
+    <html lang="en-AU" className={cn("font-sans", geist.variable)}>
       <body>{children}</body>
     </html>
   );

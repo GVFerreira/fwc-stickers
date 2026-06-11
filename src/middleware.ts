@@ -10,7 +10,8 @@ export function middleware(req: NextRequest) {
   }
 
   const auth = req.cookies.get("auth")?.value;
-  if (auth === process.env.AUTH_PASSWORD) {
+  const expected = process.env.AUTH_PASSWORD?.trim();
+  if (expected && auth === expected) {
     return NextResponse.next();
   }
 

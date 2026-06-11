@@ -26,10 +26,10 @@ export default function LoginPage() {
         router.push("/");
         router.refresh();
       } else {
-        setError("Senha incorreta. Tente novamente.");
+        setError("Incorrect password. Please try again.");
       }
     } catch {
-      setError("Erro ao conectar. Tente novamente.");
+      setError("Connection error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ export default function LoginPage() {
               FIFA World Cup 2026
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Álbum de Figurinhas — Tracker Pessoal
+              Sticker Album — Personal Tracker
             </p>
           </div>
         </div>
@@ -54,7 +54,7 @@ export default function LoginPage() {
           <div className="space-y-2">
             <Input
               type="password"
-              placeholder="Digite a senha de acesso"
+              placeholder="Enter access password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoFocus
@@ -69,7 +69,7 @@ export default function LoginPage() {
             disabled={loading || !password}
             className="w-full h-11 font-semibold bg-[var(--gold)] text-[#080d1a] hover:bg-[var(--gold-dim)] disabled:opacity-50"
           >
-            {loading ? "Entrando..." : "Entrar"}
+            {loading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
       </div>
