@@ -10,10 +10,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Username e senha são obrigatórios" }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({ where: { username } });
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
+  const existing = await prisma.user.findUnique({ where: { username } });
+  if (existing) {
+    return NextResponse.json({ error: "Username já está em uso" }, { status: 409 });
   }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const user = await prisma.user.create({ data: { username, passwordHash } });
 
   const token = await signToken(user.id);
   const res = NextResponse.json({ ok: true });
@@ -24,11 +27,5 @@ export async function POST(req: NextRequest) {
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
-  return res;
-}
-
-export async function DELETE() {
-  const res = NextResponse.json({ ok: true });
-  res.cookies.delete("auth");
   return res;
 }

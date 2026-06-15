@@ -7,7 +7,7 @@ import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,7 +19,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/auth", {
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -29,7 +29,7 @@ export default function LoginPage() {
         router.refresh();
       } else {
         const data = await res.json();
-        setError(data.error ?? "Credenciais inválidas.");
+        setError(data.error ?? "Erro ao criar conta.");
       }
     } catch {
       setError("Erro de conexão. Tente novamente.");
@@ -48,7 +48,7 @@ export default function LoginPage() {
               FIFA World Cup 2026
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Sticker Album — Personal Tracker
+              Sticker Album — Criar conta
             </p>
           </div>
         </div>
@@ -69,7 +69,7 @@ export default function LoginPage() {
               placeholder="Senha"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
+              autoComplete="new-password"
               className="bg-card border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-[var(--gold)] h-11"
             />
             {error && (
@@ -81,12 +81,12 @@ export default function LoginPage() {
             disabled={loading || !username || !password}
             className="w-full h-11 font-semibold bg-[var(--gold)] text-[#080d1a] hover:bg-[var(--gold-dim)] disabled:opacity-50"
           >
-            {loading ? "Entrando..." : "Entrar"}
+            {loading ? "Criando conta..." : "Criar conta"}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            Não tem conta?{" "}
-            <Link href="/register" className="text-(--gold) hover:underline font-medium">
-              Criar conta
+            Já tem conta?{" "}
+            <Link href="/login" className="text-(--gold) hover:underline font-medium">
+              Entrar
             </Link>
           </p>
         </form>

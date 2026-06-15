@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyToken } from "@/lib/jwt";
 
-const PUBLIC_PATHS = ["/login", "/api/auth"];
+const PUBLIC_PATHS = ["/login", "/register", "/api/auth"];
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  const auth = req.cookies.get("auth")?.value;
-  const expected = process.env.AUTH_PASSWORD?.trim();
-  if (expected && auth === expected) {
-    return NextResponse.next();
+  const token = req.cookies.get("auth")?.value;
+  if (token) {
+    const userId = await verifyToken(token);
+    if (userId) {
+      const res = NextResponse.next();
+      res.headers.set("x-user-id", userId);
+      return res;
+    }
   }
 
   const loginUrl = req.nextUrl.clone();

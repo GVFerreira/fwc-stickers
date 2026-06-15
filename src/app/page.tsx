@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { LogOutIcon } from "lucide-react";
 
 type Filter = "all" | "collected" | "missing";
 
@@ -239,6 +241,7 @@ function GroupNavContent({
 }
 
 export default function Home() {
+  const router = useRouter();
   const [stickers, setStickers] = useState<Sticker[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<PendingToggle | null>(null);
@@ -246,6 +249,11 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [activeGroup, setActiveGroup] = useState("group-FWC");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth", { method: "DELETE" });
+    router.push("/login");
+  };
 
   const fetchStickers = useCallback(async () => {
     try {
@@ -449,9 +457,19 @@ export default function Home() {
               <div className="text-[0.7rem] text-muted-foreground hidden sm:block">Sticker Album — Personal Tracker</div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-xl font-extrabold text-(--gold) leading-none">{pct}%</div>
-            <div className="text-[0.6rem] text-muted-foreground uppercase tracking-wider mt-0.5">complete</div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-xl font-extrabold text-(--gold) leading-none">{pct}%</div>
+              <div className="text-[0.6rem] text-muted-foreground uppercase tracking-wider mt-0.5">complete</div>
+            </div>
+            <Button
+              size="sm"
+              
+              onClick={handleLogout}
+            >
+              Logout
+              <LogOutIcon className="size-4" />
+            </Button>
           </div>
         </div>
       </header>

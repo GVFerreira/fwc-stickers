@@ -7,13 +7,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  username     String        @unique
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  userStickers UserSticker[]
+}
+
 model Sticker {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  code      String   @unique
-  title     String
-  section   String
-  type      String
-  collected Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  code         String        @unique
+  title        String
+  section      String
+  type         String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  userStickers UserSticker[]
+}
+
+model UserSticker {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String  @db.ObjectId
+  stickerCode String
+  user      User    @relation(fields: [userId], references: [id])
+  sticker   Sticker @relation(fields: [stickerCode], references: [code])
+
+  @@unique([userId, stickerCode])
 }

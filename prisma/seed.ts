@@ -1017,7 +1017,6 @@ async function main() {
       title: s.title,
       section: s.section,
       type: s.type,
-      collected: false,
     })),
   })
 
