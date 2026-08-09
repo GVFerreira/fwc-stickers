@@ -26,7 +26,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { LogOutIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, LogOutIcon } from "lucide-react";
 
 type Filter = "all" | "collected" | "missing";
 
@@ -109,6 +109,84 @@ const GROUP_COLORS: Record<string, { bg: string; border: string; text: string }>
 
 const FWC_SECTIONS = ["We Are Panini", "FIFA World Cup 2026", "Host Countries and Cities", "FIFA World Cup History"];
 const GROUPS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
+
+const FWC_FLAG = "⭐️";
+const EXTRA_FLAG = "✨";
+
+/** "RSA11" → { prefix: "RSA", number: "11" } · "00" → { prefix: "", number: "00" } · "LM" → { prefix: "LM", number: "" } */
+function splitCode(code: string): { prefix: string; number: string } {
+  const match = /^(\D*)(\d*)$/.exec(code);
+  return { prefix: match?.[1] ?? code, number: match?.[2] ?? "" };
+}
+
+function sortNumbers(numbers: string[]): string[] {
+  return [...numbers].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+}
+
+/**
+ * Texto simples com as figurinhas faltando, na ordem do álbum:
+ * FWC especiais → grupos A–L (times na ordem oficial) → extras.
+ */
+function buildMissingText(stickers: Sticker[]): string {
+  const missing = stickers.filter((s) => !s.collected);
+  const lines: string[] = ["Figurinhas Faltando"];
+
+  const fwc = missing.filter(
+    (s) => FWC_SECTIONS.includes(s.section) && s.type !== "Extra / Base"
+  );
+  if (fwc.length > 0) {
+    const numbers = sortNumbers(fwc.map((s) => splitCode(s.code).number || s.code));
+    lines.push(`${FWC_FLAG} FWC: ${numbers.join(", ")}`);
+  }
+
+  for (const groupId of GROUPS) {
+    for (const section of GROUP_TEAMS[groupId]) {
+      const teamMissing = missing.filter(
+        (s) => s.section === section && s.type !== "Extra / Base"
+      );
+      if (teamMissing.length === 0) continue;
+
+      const flag = TEAM_FLAGS[section] ?? "";
+      const prefix = splitCode(teamMissing[0].code).prefix;
+      const numbers = sortNumbers(teamMissing.map((s) => splitCode(s.code).number || s.code));
+      lines.push(`${flag} ${prefix}: ${numbers.join(", ")}`);
+    }
+  }
+
+  const extras = missing.filter((s) => s.type === "Extra / Base");
+  if (extras.length > 0) {
+    const codes = [...extras].sort((a, b) => a.code.localeCompare(b.code)).map((s) => s.code);
+    lines.push(`${EXTRA_FLAG} EXTRA: ${codes.join(", ")}`);
+  }
+
+  if (lines.length === 1) lines.push("Nenhuma! Álbum completo 🎉");
+
+  return lines.join("\n");
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // cai no fallback abaixo (clipboard bloqueado / contexto não seguro)
+  }
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 /* ── Circular progress stat ── */
 function CircleStat({
@@ -249,6 +327,14 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [activeGroup, setActiveGroup] = useState("group-FWC");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyMissing = async () => {
+    const ok = await copyText(buildMissingText(stickers));
+    if (!ok) return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleLogout = async () => {
     await fetch("/api/auth", { method: "DELETE" });
@@ -534,6 +620,20 @@ export default function Home() {
                       {f === "all" ? "All" : f === "collected" ? "✓ Collected" : "✗ Missing"}
                     </Button>
                   ))}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={cn(
+                      "border-border",
+                      copied ? "text-(--green) border-(--green-dim)" : "text-muted-foreground"
+                    )}
+                    onClick={handleCopyMissing}
+                    disabled={total === 0}
+                    title="Copy missing stickers list"
+                  >
+                    {copied ? <CheckIcon /> : <CopyIcon />}
+                    {copied ? "Copied!" : `Copy missing (${total - totalCollected})`}
+                  </Button>
                 </div>
               </div>
 
