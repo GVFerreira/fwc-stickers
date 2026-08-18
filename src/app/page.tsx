@@ -26,7 +26,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { CheckIcon, CopyIcon, LogOutIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, LogOutIcon, MinusIcon, PlusIcon } from "lucide-react";
 
 type Filter = "all" | "collected" | "missing";
 
@@ -36,6 +36,7 @@ interface Sticker {
   section: string;
   type: string;
   collected: boolean;
+  duplicates: number;
 }
 
 interface PendingToggle {
@@ -162,6 +163,52 @@ function buildMissingText(stickers: Sticker[]): string {
   if (lines.length === 1) lines.push("Nenhuma! Álbum completo 🎉");
 
   return lines.join("\n");
+}
+
+/** Quantos códigos por linha na listagem de repetidas */
+const DUPES_PER_LINE = 5;
+
+/**
+ * Texto simples com as figurinhas repetidas, na ordem do álbum:
+ * FWC especiais → grupos A–L (times na ordem oficial) → extras.
+ */
+function buildDuplicatesText(stickers: Sticker[]): string {
+  const dupes = stickers.filter((s) => s.duplicates > 0);
+  const totalDupes = dupes.reduce((sum, s) => sum + s.duplicates, 0);
+  const blocks: string[] = [];
+
+  const pushBlock = (flag: string, prefix: string, list: Sticker[]) => {
+    if (list.length === 0) return;
+    const entries = sortStickers(list).map((s) => `${s.code} (x${s.duplicates})`);
+    const rows: string[] = [];
+    for (let i = 0; i < entries.length; i += DUPES_PER_LINE) {
+      rows.push(entries.slice(i, i + DUPES_PER_LINE).join(", "));
+    }
+    blocks.push(`${flag} ${prefix}\n${rows.join("\n")}`);
+  };
+
+  pushBlock(
+    FWC_FLAG,
+    "FWC",
+    dupes.filter((s) => FWC_SECTIONS.includes(s.section) && s.type !== "Extra / Base")
+  );
+
+  for (const groupId of GROUPS) {
+    for (const section of GROUP_TEAMS[groupId]) {
+      const teamDupes = dupes.filter(
+        (s) => s.section === section && s.type !== "Extra / Base"
+      );
+      if (teamDupes.length === 0) continue;
+      pushBlock(TEAM_FLAGS[section] ?? "", splitCode(teamDupes[0].code).prefix, teamDupes);
+    }
+  }
+
+  pushBlock(EXTRA_FLAG, "EXTRA", dupes.filter((s) => s.type === "Extra / Base"));
+
+  const header = `📦 DUPLICATE STICKERS (${totalDupes})`;
+  if (blocks.length === 0) return `${header}\n\nNenhuma repetida registrada.`;
+
+  return `${header}\n\n${blocks.join("\n\n")}`;
 }
 
 async function copyText(text: string): Promise<boolean> {
@@ -327,13 +374,13 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [activeGroup, setActiveGroup] = useState("group-FWC");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"missing" | "duplicates" | null>(null);
 
-  const handleCopyMissing = async () => {
-    const ok = await copyText(buildMissingText(stickers));
-    if (!ok) return;
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async (kind: "missing" | "duplicates") => {
+    const text = kind === "missing" ? buildMissingText(stickers) : buildDuplicatesText(stickers);
+    if (!(await copyText(text))) return;
+    setCopied(kind);
+    setTimeout(() => setCopied(null), 2000);
   };
 
   const handleLogout = async () => {
@@ -373,9 +420,10 @@ export default function Home() {
   const confirmToggle = async () => {
     if (!pending) return;
     const { code, isCollected } = pending;
+    const previous = stickers.find((s) => s.code === code);
     setPending(null);
     setStickers((prev) =>
-      prev.map((s) => s.code === code ? { ...s, collected: !isCollected } : s)
+      prev.map((s) => s.code === code ? { ...s, collected: !isCollected, duplicates: 0 } : s)
     );
     try {
       await fetch("/api/stickers", {
@@ -385,7 +433,31 @@ export default function Home() {
       });
     } catch {
       setStickers((prev) =>
-        prev.map((s) => s.code === code ? { ...s, collected: isCollected } : s)
+        prev.map((s) => s.code === code
+          ? { ...s, collected: isCollected, duplicates: previous?.duplicates ?? 0 }
+          : s)
+      );
+    }
+  };
+
+  const updateDuplicates = async (code: string, next: number) => {
+    if (next < 0 || next > 999) return;
+    const previous = stickers.find((s) => s.code === code)?.duplicates ?? 0;
+    if (next === previous) return;
+
+    setStickers((prev) =>
+      prev.map((s) => s.code === code ? { ...s, duplicates: next } : s)
+    );
+    try {
+      const res = await fetch("/api/stickers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, duplicates: next }),
+      });
+      if (!res.ok) throw new Error("PATCH failed");
+    } catch {
+      setStickers((prev) =>
+        prev.map((s) => s.code === code ? { ...s, duplicates: previous } : s)
       );
     }
   };
@@ -393,6 +465,10 @@ export default function Home() {
   const totalCollected = stickers.filter((s) => s.collected).length;
   const total = stickers.length;
   const pct = total > 0 ? Math.round((totalCollected / total) * 100) : 0;
+  const totalDuplicates = stickers.reduce((sum, s) => sum + s.duplicates, 0);
+  const pendingDuplicates = pending
+    ? stickers.find((s) => s.code === pending.code)?.duplicates ?? 0
+    : 0;
 
   const searchLower = search.toLowerCase();
 
@@ -464,10 +540,11 @@ export default function Home() {
           key={s.code}
           className={cn("sticker-btn", s.collected && "collected")}
           onClick={() => setPending({ code: s.code, title: s.title, isCollected: s.collected })}
-          title={s.collected ? `${s.code} — click to remove` : `${s.code} — click to add`}
+          title={s.collected ? `${s.code} — click for options` : `${s.code} — click to add`}
         >
           <span className="sticker-code">{s.code}</span>
           <span className="sticker-title">{s.title}</span>
+          {s.duplicates > 0 && <span className="sticker-dupe">x{s.duplicates}</span>}
           {(s.type === "foil" || s.type === "silver") && (
             <span
               className="absolute top-1 right-1 text-[0.45rem] font-bold px-1 py-px rounded border uppercase tracking-wide"
@@ -625,14 +702,28 @@ export default function Home() {
                     variant="outline"
                     className={cn(
                       "border-border",
-                      copied ? "text-(--green) border-(--green-dim)" : "text-muted-foreground"
+                      copied === "missing" ? "text-(--green) border-(--green-dim)" : "text-muted-foreground"
                     )}
-                    onClick={handleCopyMissing}
+                    onClick={() => handleCopy("missing")}
                     disabled={total === 0}
                     title="Copy missing stickers list"
                   >
-                    {copied ? <CheckIcon /> : <CopyIcon />}
-                    {copied ? "Copied!" : `Copy missing (${total - totalCollected})`}
+                    {copied === "missing" ? <CheckIcon /> : <CopyIcon />}
+                    {copied === "missing" ? "Copied!" : `Copy missing (${total - totalCollected})`}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={cn(
+                      "border-border",
+                      copied === "duplicates" ? "text-(--green) border-(--green-dim)" : "text-muted-foreground"
+                    )}
+                    onClick={() => handleCopy("duplicates")}
+                    disabled={totalDuplicates === 0}
+                    title="Copy duplicate stickers list"
+                  >
+                    {copied === "duplicates" ? <CheckIcon /> : <CopyIcon />}
+                    {copied === "duplicates" ? "Copied!" : `Copy duplicates (${totalDuplicates})`}
                   </Button>
                 </div>
               </div>
@@ -721,8 +812,8 @@ export default function Home() {
       <AlertDialog open={!!pending} onOpenChange={(open) => !open && setPending(null)}>
         <AlertDialogContent className="bg-slate-950 border-border text-foreground">
           <AlertDialogHeader>
-            <AlertDialogTitle className={pending?.isCollected ? "text-(--red)" : "text-(--green)"}>
-              {pending?.isCollected ? "Remove sticker?" : "Add sticker?"}
+            <AlertDialogTitle className={pending?.isCollected ? "text-(--gold)" : "text-(--green)"}>
+              {pending?.isCollected ? "Sticker collected" : "Add sticker?"}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
               <span className="font-bold text-foreground">{pending?.code}</span>
@@ -730,13 +821,44 @@ export default function Home() {
               {pending?.title}
               <br />
               {pending?.isCollected
-                ? "This sticker will be marked as not collected."
+                ? "Add duplicates you already have, or remove it from your album."
                 : "This sticker will be marked as collected in your album."}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {pending?.isCollected && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary/40 px-3 py-2.5">
+              <span className="text-sm font-semibold">Duplicates</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  className="border-border text-foreground"
+                  aria-label="Remove one duplicate"
+                  disabled={pendingDuplicates === 0}
+                  onClick={() => updateDuplicates(pending.code, pendingDuplicates - 1)}
+                >
+                  <MinusIcon />
+                </Button>
+                <span className="w-8 text-center text-base font-extrabold tabular-nums">
+                  {pendingDuplicates}
+                </span>
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  className="border-border text-foreground"
+                  aria-label="Add one duplicate"
+                  onClick={() => updateDuplicates(pending.code, pendingDuplicates + 1)}
+                >
+                  <PlusIcon />
+                </Button>
+              </div>
+            </div>
+          )}
+
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-secondary border-border text-foreground hover:bg-secondary/80">
-              Cancel
+              {pending?.isCollected ? "Done" : "Cancel"}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmToggle}
@@ -747,7 +869,7 @@ export default function Home() {
                   : "bg-(--green) text-[#080d1a] hover:bg-(--green)/80"
               )}
             >
-              {pending?.isCollected ? "Yes, remove" : "Yes, add"}
+              {pending?.isCollected ? "Remove from album" : "Yes, add"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

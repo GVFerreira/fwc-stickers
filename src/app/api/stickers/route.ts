@@ -20,13 +20,17 @@ export async function GET(req: NextRequest) {
 
     const userStickers = await prisma.userSticker.findMany({
       where: { userId },
-      select: { stickerCode: true },
+      select: { stickerCode: true, duplicates: true },
     });
 
-    const collectedSet = new Set(userStickers.map((us) => us.stickerCode));
+    const collectedMap = new Map(userStickers.map((us) => [us.stickerCode, us.duplicates]));
 
     return NextResponse.json({
-      stickers: stickers.map((s) => ({ ...s, collected: collectedSet.has(s.code) })),
+      stickers: stickers.map((s) => ({
+        ...s,
+        collected: collectedMap.has(s.code),
+        duplicates: collectedMap.get(s.code) ?? 0,
+      })),
     });
   } catch {
     return NextResponse.json({ error: "Failed to fetch stickers" }, { status: 500 });
@@ -43,6 +47,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Failed to save sticker" }, { status: 500 });
+  }
+}
+
+// Atualiza a quantidade de repetidas de uma figurinha já colada
+export async function PATCH(req: NextRequest) {
+  const userId = await getUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { code, duplicates } = await req.json();
+    if (typeof code !== "string" || !Number.isInteger(duplicates) || duplicates < 0 || duplicates > 999) {
+      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    }
+
+    await prisma.userSticker.update({
+      where: { userId_stickerCode: { userId, stickerCode: code } },
+      data: { duplicates },
+    });
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "Failed to update duplicates" }, { status: 500 });
   }
 }
 

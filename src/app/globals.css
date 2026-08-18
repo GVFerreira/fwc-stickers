@@ -94,8 +94,24 @@ body {
   border-color: var(--green-dim);
 }
 .sticker-btn.collected:hover {
-  background: rgba(224,48,48,0.08);
-  border-color: var(--red);
+  background: rgba(245,200,66,0.08);
+  border-color: var(--gold);
+}
+
+/* Contador de repetidas */
+.sticker-dupe {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(96,176,224,0.18);
+  border: 1px solid rgba(96,176,224,0.4);
+  color: #7cc4ec;
+  letter-spacing: 0.2px;
 }
 
 .sticker-code {
@@ -106,7 +122,7 @@ body {
   line-height: 1;
 }
 .sticker-btn.collected .sticker-code { color: var(--green); }
-.sticker-btn.collected:hover .sticker-code { color: var(--red); }
+.sticker-btn.collected:hover .sticker-code { color: var(--gold); }
 
 .sticker-title {
   font-size: 0.6rem;
@@ -119,7 +135,7 @@ body {
   word-break: break-word;
 }
 .sticker-btn.collected .sticker-title { color: rgba(34,197,94,0.7); }
-.sticker-btn.collected:hover .sticker-title { color: rgba(224,48,48,0.7); }
+.sticker-btn.collected:hover .sticker-title { color: rgba(245,200,66,0.7); }
 
 /* ── Toast animation ── */
 @keyframes slideIn {
