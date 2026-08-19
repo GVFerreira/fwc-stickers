@@ -130,7 +130,7 @@ function sortNumbers(numbers: string[]): string[] {
  */
 function buildMissingText(stickers: Sticker[]): string {
   const missing = stickers.filter((s) => !s.collected);
-  const lines: string[] = ["Missing Stickers"];
+  const lines: string[] = [];
 
   const fwc = missing.filter(
     (s) => FWC_SECTIONS.includes(s.section) && s.type !== "Extra / Base"
@@ -148,9 +148,8 @@ function buildMissingText(stickers: Sticker[]): string {
       if (teamMissing.length === 0) continue;
 
       const flag = TEAM_FLAGS[section] ?? "";
-      const prefix = splitCode(teamMissing[0].code).prefix;
-      const numbers = sortNumbers(teamMissing.map((s) => splitCode(s.code).number || s.code));
-      lines.push(`${flag}: ${teamMissing.map((s) => s.code).join(", ")}`);
+      const codes = sortStickers(teamMissing).map((s) => s.code);
+      lines.push(`${flag}: ${codes.join(", ")}`);
     }
   }
 
@@ -160,9 +159,10 @@ function buildMissingText(stickers: Sticker[]): string {
     lines.push(`${EXTRA_FLAG} EXTRA: ${codes.join(", ")}`);
   }
 
-  if (lines.length === 1) lines.push("Nenhuma! Álbum completo 🎉");
+  const header = `❌ MISSING STICKERS (${missing.length})`;
+  if (lines.length === 0) return `${header}\n\nNenhuma! Álbum completo 🎉`;
 
-  return lines.join("\n");
+  return `${header}\n\n${lines.join("\n")}`;
 }
 
 /** Quantos códigos por linha na listagem de repetidas */
@@ -184,7 +184,7 @@ function buildDuplicatesText(stickers: Sticker[]): string {
     for (let i = 0; i < entries.length; i += DUPES_PER_LINE) {
       rows.push(entries.slice(i, i + DUPES_PER_LINE).join(", "));
     }
-    blocks.push(`${flag}: ${rows.join("")}`);
+    blocks.push(`${flag}: ${rows.join(", ")}`);
   };
 
   pushBlock(
