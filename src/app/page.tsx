@@ -130,7 +130,7 @@ function sortNumbers(numbers: string[]): string[] {
  */
 function buildMissingText(stickers: Sticker[]): string {
   const missing = stickers.filter((s) => !s.collected);
-  const lines: string[] = ["Figurinhas Faltando"];
+  const lines: string[] = ["Missing Stickers"];
 
   const fwc = missing.filter(
     (s) => FWC_SECTIONS.includes(s.section) && s.type !== "Extra / Base"
@@ -150,7 +150,7 @@ function buildMissingText(stickers: Sticker[]): string {
       const flag = TEAM_FLAGS[section] ?? "";
       const prefix = splitCode(teamMissing[0].code).prefix;
       const numbers = sortNumbers(teamMissing.map((s) => splitCode(s.code).number || s.code));
-      lines.push(`${flag} ${prefix}: ${numbers.join(", ")}`);
+      lines.push(`${flag}: ${teamMissing.map((s) => s.code).join(", ")}`);
     }
   }
 
@@ -184,7 +184,7 @@ function buildDuplicatesText(stickers: Sticker[]): string {
     for (let i = 0; i < entries.length; i += DUPES_PER_LINE) {
       rows.push(entries.slice(i, i + DUPES_PER_LINE).join(", "));
     }
-    blocks.push(`${flag} ${prefix}\n${rows.join("\n")}`);
+    blocks.push(`${flag}: ${rows.join("")}`);
   };
 
   pushBlock(
@@ -208,7 +208,7 @@ function buildDuplicatesText(stickers: Sticker[]): string {
   const header = `📦 DUPLICATE STICKERS (${totalDupes})`;
   if (blocks.length === 0) return `${header}\n\nNenhuma repetida registrada.`;
 
-  return `${header}\n\n${blocks.join("\n\n")}`;
+  return `${header}\n\n${blocks.join("\n")}`;
 }
 
 async function copyText(text: string): Promise<boolean> {
